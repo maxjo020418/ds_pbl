@@ -4,15 +4,16 @@ services:
     image: mysql:8.0
     volumes:
       - ./mysql_data:/var/lib/mysql
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init_mysql.sh:/docker-entrypoint-initdb.d/init.sh
     # restart: always
     ports:
       - "3306:3306"
     environment:
+      MYSQL_DATABASE: datascience_pbl
       MYSQL_ROOT_PASSWORD: ${DB_PW}
-      MYSQL_DATABASE: testdb
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PW}
+      MYSQL_ROOT_HOST: '%'
     networks:
       - mysql-phpmyadmin
 
@@ -26,6 +27,8 @@ services:
       - "8090:80"
     environment:
       PMA_HOST: mysql
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PW}
       MYSQL_ROOT_PASSWORD: ${DB_PW}
     networks:
       - mysql-phpmyadmin
