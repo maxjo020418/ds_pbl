@@ -5,7 +5,13 @@ from bs4 import BeautifulSoup
 import re
 from urllib.parse import urlparse, parse_qs
 
-def get_se_fs(url: str) -> str:
+
+def get_se_fs(url: str) -> str:  
+    """
+    미사용하기로 결정
+    쓰지마셈
+    """
+
     # 1. Fetch the page and ensure it's valid
     url = url
     response = requests.get(url)  # Sends a GET request
@@ -33,6 +39,7 @@ def get_se_fs(url: str) -> str:
 
     return texts
 
+
 def get_span(url: str) -> str:
     resp = requests.get(url)
     resp.raise_for_status()
@@ -47,6 +54,8 @@ def get_span(url: str) -> str:
 
 def to_postprint(url: str) -> str | None:
     """
+    https://blog.naver.com/PostPrint.naver 엔드포인트가 문서출력 형태로 배출
+
     다음 형태로 url 변형하여 출력, 호환 불가일 경우 None 배출
     "https://blog.naver.com/PostPrint.naver?blogId={blogId}&logNo={logNo}"
     """
@@ -57,6 +66,7 @@ def to_postprint(url: str) -> str | None:
     if m:
         blogId, logNo = m.groups()
     else:
+        print(f'skipping: {url}')
         return None
     
     return f"https://blog.naver.com/PostPrint.naver?blogId={blogId}&logNo={logNo}"

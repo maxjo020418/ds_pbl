@@ -1,4 +1,11 @@
 .idea
+*/idea
 venv
-practices
+__pycache__
+
 .env
+practices
+exams
+
+docker/init.sql
+docker/mysql_data
