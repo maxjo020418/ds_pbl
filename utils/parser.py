@@ -53,20 +53,41 @@ def get_span(url: str) -> str:
 
 
 def to_postprint(url: str) -> str | None:
-    """
-    https://blog.naver.com/PostPrint.naver 엔드포인트가 문서출력 형태로 배출
+    """Convert various Naver blog URLs to the ``PostPrint`` endpoint.
 
-    다음 형태로 url 변형하여 출력, 호환 불가일 경우 None 배출
-    "https://blog.naver.com/PostPrint.naver?blogId={blogId}&logNo={logNo}"
+    This helper normalises a blog post URL so that ``PostPrint.naver``
+    directly returns a printer‑friendly page.  ``None`` is returned if the
+    URL format is unrecognised.
     """
+
     p = urlparse(url)
 
-    # 1) /{blogId}/{logNo} pattern
+    # Already in PostPrint format
+    if p.path.rstrip('/') == '/PostPrint.naver':
+        return url
+
+    # Pattern 1: /{blogId}/{logNo}
     m = re.fullmatch(r'/([^/]+)/(\d+)', p.path)
     if m:
         blogId, logNo = m.groups()
     else:
-        print(f'skipping: {url}')
-        return None
-    
-    return f"https://blog.naver.com/PostPrint.naver?blogId={blogId}&logNo={logNo}"
+        # Pattern 2: query parameters
+        qs = parse_qs(p.query)
+        blogId = qs.get('blogId')
+        logNo = qs.get('logNo')
+
+        # e.g. https://blog.naver.com/{blogId}?Redirect=Log&logNo=123
+        if logNo and not blogId:
+            m2 = re.fullmatch(r'/([^/]+)', p.path)
+            if m2:
+                blogId = [m2.group(1)]
+
+        if not (blogId and logNo):
+            print(f'skipping: {url}')
+            return None
+
+        blogId, logNo = blogId[0], logNo[0]
+
+    return (
+        f"https://blog.naver.com/PostPrint.naver?blogId={blogId}&logNo={logNo}"
+    )
