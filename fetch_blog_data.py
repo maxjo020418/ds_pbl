@@ -1,75 +1,110 @@
-import os
 import time
-import pickle
 from typing import Dict, List
+from tqdm import tqdm
 
 import requests
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+import pandas as pd
 
-from parser import to_postprint, get_span
+from utils.parser import to_postprint, get_span
 from utils.poisson_rng import rng
 
+from utils.DB_connect import get_engine, get_cred
+engine = get_engine()
+CX, _, _ = get_cred()
 
-load_dotenv(dotenv_path="./docker/.env")
 
-CX = os.getenv("CX")
-KEY = os.getenv("KEY")
-DB_USER = os.getenv("DB_USER")
-DB_PW = os.getenv("DB_PW")
-
-DATABASE_URL = (
-    f"mysql+pymysql://{DB_USER}:{DB_PW}@localhost:3306/datascience_pbl"
-)
-
-def fetch_library_names() -> List[str]:
-    engine = create_engine(DATABASE_URL, future=True)
+def fetch_library_names() -> List[tuple[int, str]]:
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT `도서관명` FROM library_data"))
-        return [row[0] for row in result]
+        result = conn.execute(text(
+            "SELECT `id`, `도서관명` FROM library_data"
+            ))
+        return [(int(row[0]), row[1]) for row in result]
 
 def google_search(name: str) -> List[str]:
-    params = {
-        "cx": CX,
-        "key": KEY,
-        "exactTerms": name,
-    }
-    r = requests.get(
-        "https://customsearch.googleapis.com/customsearch/v1",
-        params=params,
+    URL = (
+    "https://discoveryengine.googleapis.com/v1alpha/"
+    "projects/926277443791/locations/global/"
+    "collections/default_collection/engines/"
+    "naver-blog-search_1749976369467/"
+    "servingConfigs/default_search:search"
     )
+
+    headers = {
+    "Authorization": f"Bearer {CX}",
+    "Content-Type": "application/json",
+    }
+
+    payload = {
+    "query": "역삼도서관",
+    "pageSize": 10,
+    "queryExpansionSpec": {"condition": "AUTO"},
+    "spellCorrectionSpec": {"mode": "AUTO"},
+    "languageCode": "en-US",
+    "userInfo": {"timeZone": "Asia/Seoul"}
+    }
+
+    r = requests.post(URL, headers=headers, json=payload)
+    # r.raise_for_status()
+
     if r.ok:
-        data = r.json()
-        return [item.get("link") for item in data.get("items", [])]
-    return []
+        results = r.json()['results']
+        return [result['document']['derivedStructData']['link'] 
+                for result in results]
+    else: 
+        print(r)
+        return []
 
 def fetch_naver_posts(links: List[str], file_handle) -> None:
-    for url in links:
+    print('starting naver fetch...')
+    for url in tqdm(links):
         pp = to_postprint(url)
         if not pp:
             continue
-        time.sleep(rng() / 10)
+        time.sleep(rng() / 10)  # RL avoidance
         try:
             text_content = get_span(pp)
         except Exception as exc:
             print(f"failed to fetch {pp}: {exc}")
             continue
-        file_handle.write(pp + "\n")
-        file_handle.write(text_content + "\n\n")
 
-def main() -> None:
+        file_handle.write(text_content + '\n[STOP]\n')  # [STOP]으로 블로그 별 쪼개기
+
+def fetch_blog_url() -> None:
+
     libraries = fetch_library_names()
-    all_links: Dict[str, List[str]] = {}
+    lib_link_data: Dict[str, list] = {
+        'id': [],
+        'library_id': [],
+        'url': [],
+        'review': [],
+    }
 
-    for name in libraries:
-        all_links[name] = google_search(name)
+    i = 0
+    for id, name in tqdm(libraries, total=len(libraries)):
+        results = google_search(name)
+        for result in results:
+            lib_link_data['id'].append(i)
+            lib_link_data['library_id'].append(id)
+            lib_link_data['url'].append(result)
+            lib_link_data['review'].append(None)
+            i += 1
+        time.sleep(.5)
+    
+    df_lib_link_data = pd.DataFrame(lib_link_data)
+    df_lib_link_data.to_sql(
+        name='library_reviews',
+        con=engine,
+        if_exists='replace',  # Options: 'fail', 'replace', 'append'
+        index=False
+    )
 
-    with open("./data/google_links.pkl", "wb") as f:
-        pickle.dump(all_links, f)
+if __name__ == "__main__":
+    fetch_blog_url()
 
+    '''
     with open("./data/naver_posts.txt", "w", encoding="utf-8") as out:
         for links in all_links.values():
             fetch_naver_posts(links, out)
-
-if __name__ == "__main__":
-    main()
+    '''
