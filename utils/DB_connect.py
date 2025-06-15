@@ -5,8 +5,8 @@ import subprocess
 
 load_dotenv(dotenv_path="./docker/.env")
 
-# CX = os.getenv("CX")
-# KEY = os.getenv("KEY")
+N_ID = os.getenv("N_ID")
+N_PW = os.getenv("N_PW")
 
 def get_access_token() -> str:
     result = subprocess.run(
@@ -29,4 +29,4 @@ def get_engine() -> Engine:
     return create_engine(DATABASE_URL, future=True)
 
 def get_cred() -> tuple:
-    return get_access_token(), DB_USER, DB_PW
+    return get_access_token(), N_ID, N_PW, DB_USER, DB_PW
