@@ -22,7 +22,7 @@ def fetch_library_names() -> List[tuple[int, str, str]]:
             ))
         return [(int(row[0]), row[1], row[2]) for row in result]
 
-def google_search(name: str, location: str) -> List[tuple[str, str]]:
+def naver_search(name: str, location: str) -> List[tuple[str, str]]:
     import requests
 
     url = "https://openapi.naver.com/v1/search/blog.json"
@@ -79,7 +79,7 @@ def fetch_blog_url() -> None:
             'review': [],
         }
 
-        results = google_search(name, location)
+        results = naver_search(name, location)
         for link, desc in results:
             lib_link_data['id'].append(i)
             lib_link_data['library_id'].append(id)
