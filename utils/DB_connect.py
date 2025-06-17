@@ -26,7 +26,7 @@ DATABASE_URL = (
 )
 
 def get_engine() -> Engine:
-    return create_engine(DATABASE_URL, future=True)
+    return create_engine(DATABASE_URL, echo=True, future=True)
 
 def get_cred() -> tuple:
     return get_access_token(), N_ID, N_PW, DB_USER, DB_PW
