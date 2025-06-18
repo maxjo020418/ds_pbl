@@ -25,8 +25,8 @@ DATABASE_URL = (
     f"mysql+pymysql://{DB_USER}:{DB_PW}@localhost:3306/datascience_pbl"
 )
 
-def get_engine() -> Engine:
-    return create_engine(DATABASE_URL, echo=True, future=True)
+def get_engine(echo: bool = False) -> Engine:
+    return create_engine(DATABASE_URL, echo=echo, future=True)
 
 def get_cred() -> tuple:
     return get_access_token(), N_ID, N_PW, DB_USER, DB_PW
